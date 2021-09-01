@@ -1837,7 +1837,7 @@ int init_basic_config(seq_options* opts){
     toml_table_t* main_conf = toml_table_in(root_conf, "main");
     if(!main_conf){
         printf("main is empty\n");
-        goto release1002;
+        goto release1003;
     }
 
     const char* i_key = 0;
@@ -1949,7 +1949,7 @@ int init_basic_config(seq_options* opts){
     toml_table_t* load_conf = toml_table_in(root_conf, "load");
     if(!load_conf){
         printf("load is empty\n");
-        goto release1002;
+        goto release1003;
     }
 
     i_key = 0;
@@ -2005,7 +2005,7 @@ int init_basic_config(seq_options* opts){
     // parse ssar.conf [proc] part
     toml_table_t* proc_conf = toml_table_in(root_conf, "proc");
     if(!proc_conf){
-        goto release1002;
+        goto release1003;
     }
 
     i_key = 0;
@@ -2032,12 +2032,13 @@ int init_basic_config(seq_options* opts){
         }
     }
 
-release1002:
+release1003:
     toml_free(root_conf); 
-    root_conf = 0;
-release1001:
+release1002:
+    root_conf = NULL;
     fclose(root_fp);
-    root_fp = 0;
+release1001:
+    root_fp = NULL;
 
     return 1;
 }
@@ -2150,7 +2151,7 @@ int init_sys_config(seq_options* opts){
         }
     }
     toml_free(root_conf); 
-    root_conf = 0;
+    root_conf = NULL;
     fclose(root_fp);
     root_fp = 0;
 

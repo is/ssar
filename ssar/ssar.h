@@ -171,9 +171,8 @@ list<string> load2p_stackinfo_formats = {"count", "s_unit", "nwchan","wchan","st
 list<string> load2p_loadrd_formats = {"s", "tid", "pid", "psr", "prio","cmd"};
 list<string> load2p_stack_formats  = {"tid","pid","cmd","nwchan","wchan","stackinfo"};
 
-list<string> sys_default_formats   = {"stat:cpu:2:d","stat:cpu:4:d","stat:cpu:6:d","stat:cpu:8:d","meminfo|MemFree:|2","meminfo|AnonPages:|2","meminfo|Shmem:|2","meminfo|Dirty:|2"};
-//list<string> sys_cpu_formats     = {"user","sys","wait","hirq","sirq","c_util"};
-//list<string> sys_mem_formats     = {"free","used","buff","cach","total","m_util"};
+//list<string> sys_default_formats   = {"stat:cpu:2:d","stat:cpu:4:d","stat:cpu:6:d","stat:cpu:8:d","meminfo|MemFree:|2","meminfo|AnonPages:|2","meminfo|Shmem:|2","meminfo|Dirty:|2"};
+list<string> sys_default_formats   = {"metric=d:src_path=/proc/stat:line_begin=cpu:column=2:alias=user","metric=d:src_path=/proc/stat:line_begin=cpu:column=4:alias=system","metric=d:src_path=/proc/stat:line_begin=cpu:column=6:alias=iowait","metric=d:src_path=/proc/stat:line_begin=cpu:column=8:alias=softirq","src_path=/proc/meminfo|line_begin=MemFree:|column=2|alias=memfree","src_path=/proc/meminfo|line_begin=AnonPages:|column=2|alias=anonpages","src_path=/proc/meminfo|line_begin=Shmem:|column=2|alias=shmem","src_path=/proc/meminfo|line_begin=Dirty:|column=2|alias=dirty"};
 
 unordered_map<int,string> sched2cls {
     {0,"TS"},

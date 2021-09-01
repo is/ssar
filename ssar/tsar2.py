@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+from __future__ import print_function
 import time
 import argparse
 import datetime
@@ -36,9 +37,6 @@ signal(SIGPIPE,SIG_DFL)
 
 """
 
-#reload(sys)
-#sys.setdefaultencoding('utf8')
-
 MAX_SUB_HELP_POSITION = 45
 MAX_HELP_WIDTH        = 120
 
@@ -61,26 +59,12 @@ class ItFormatter(argparse.RawTextHelpFormatter):
 def getcpunr():
     "Return the number of CPUs in the system"
     cpunr = -1
-    for line in dopen('/proc/stat').readlines():
+    for line in open('/proc/stat').readlines():
         if line[0:3] == 'cpu':
             cpunr = cpunr + 1
-    if cpunr < 0:
-        raise Exception, "Problem finding number of CPUs in system."
+    if cpunr <= 0:
+        raise Exception("Problem finding number of CPUs in system.")
     return cpunr
-
-def dopen(filename):
-    "Open a file for reuse, if already opened, return file descriptor"
-    global fds
-    if not os.path.exists(filename):
-        raise Exception, 'File %s does not exist' % filename
-#        return None
-    if 'fds' not in globals().keys():
-        fds = {}
-    if file not in fds.keys():
-        fds[filename] = open(filename, 'r', 0)
-    else:
-        fds[filename].seek(0)
-    return fds[filename]
 
 def avg(it_list):
     return sum(it_list)/len(it_list)
@@ -191,7 +175,7 @@ def compare_kver(kver1, kver2):
 
 def get_irq_names():
     ret = {}
-    for line in dopen('/proc/interrupts'):
+    for line in open('/proc/interrupts'):
         l = line.split()
         if len(l) <= opts.cpunr: 
             continue
@@ -209,15 +193,11 @@ def get_irq_names():
 
 def get_irq_cpus():
     ret = {}
-    for line in dopen('/proc/interrupts'):
+    for line in open('/proc/interrupts'):
         l = line.split()
         if len(l) <= opts.cpunr: 
             continue
         l1 = l[0].split(':')[0]
-
-        #if not l1.isdigit():
-        #    continue
-        #l1 = int(l1)
 
         ret[l1] = []
         l2 = l[1:opts.cpunr+1]
@@ -242,17 +222,17 @@ def parse_param_int(param):
             if it_part.isdigit():
                 ret.append(int(it_part))
             else:
-                raise Exception, "param:" + param + " is not correct."
+                raise Exception("param:" + param + " is not correct.")
         elif num_part == 1:
             begin_part = it_part.split("-")[0]
             end_part   = it_part.split("-")[1]
             if not begin_part.isdigit() or not end_part.isdigit():
-                raise Exception, "param:" + param + " is not correct."
+                raise Exception("param:" + param + " is not correct.")
             if int(begin_part) >= int(end_part):
-                raise Exception, "param:" + param + " is not correct."
+                raise Exception("param:" + param + " is not correct.")
             ret.extend(range(int(begin_part), int(end_part)+1))
         else:
-            raise Exception, "param:" + param + " is not correct."
+            raise Exception("param:" + param + " is not correct.")
     ret.sort()
 
     return ret
@@ -267,18 +247,18 @@ def parse_param_str(param):
             begin_part = it_part.split("-")[0]
             end_part   = it_part.split("-")[1]
             if not begin_part.isdigit() or not end_part.isdigit():
-                raise Exception, "param:" + param + " is not correct."
+                raise Exception("param:" + param + " is not correct.")
             if int(begin_part) >= int(end_part):
-                raise Exception, "param:" + param + " is not correct."
+                raise Exception("param:" + param + " is not correct.")
             ret.extend([str(i) for i in range(int(begin_part), int(end_part)+1)])
         else:
-            raise Exception, "param:" + param + " is not correct."
+            raise Exception("param:" + param + " is not correct.")
     ret.sort()
 
     return ret
 
 def show_option_exclusive(opt1, opt2):
-    print "tsar2: error: argument " + opt1 + ": not allowed with argument " + opt2
+    print("tsar2: error: argument " + opt1 + ": not allowed with argument " + opt2)
     sys.exit(201);
 
 def check_option_exclusive():
@@ -397,10 +377,10 @@ def init_options():
             else:
                 finish_timestamp = detect_datetime(opts.finish)
                 if -1 == finish_timestamp:
-                    print "finish datetime is not correct."
+                    print("finish datetime is not correct.")
                     sys.exit(201);
                 if finish_timestamp > now_timestamp:
-                    print "finish datetime is more than now."
+                    print("finish datetime is more than now.")
                     sys.exit(201);
         adjustive_timestamp = finish_timestamp - finish_timestamp % (60 * int(opts.interval_tsar2))
         head_timestamp = adjustive_timestamp - 60 * opts.watch
@@ -441,7 +421,7 @@ def init_sys():
     if opts.specs:
         for it_spec in opts.specs:
             if it_spec not in indicators:                                                # validate indicator 
-                raise Exception, it_spec + " is not correct."
+                raise Exception(it_spec + " is not correct.")
 
     # init items
     opts.items = []
@@ -468,7 +448,7 @@ def init_sys():
 
     if not opts.picks:                                                                   # fill with default view and indicator
         if opts.formats:
-            raise Exception, "formats and picks status not match"
+            raise Exception("formats and picks status not match")
         for it_view in default_vi.keys():
             opts.picks.append(it_view)
             opts.arrange[it_view] = []
@@ -481,7 +461,7 @@ def init_sys():
                 for it_indicator in default_vi[it_view]:
                     opts.arrange[it_view].append(it_indicator)
 
-    if "io" in opts.picks:                      # io must be first order
+    if "io" in opts.picks:                               # io must be first order
         opts.item_type = "io"
     elif "traffic" in opts.picks:
         opts.item_type = "traffic"
@@ -498,7 +478,7 @@ def init_sys():
                 opts.item_mode['io'] = "specific"
                 for it_device in opts.items:
                     if it_device not in disk_alls:       # validate io item
-                        raise Exception, "disk device " + it_device + " is not correct."
+                        raise Exception("disk device " + it_device + " is not correct.")
             else:
                 opts.item_mode['io'] = "every"
 
@@ -529,7 +509,7 @@ def init_sys():
                 opts.item_mode['traffic'] = "specific"
                 for it_device in opts.items:
                     if it_device not in network_alls:       # validate io item
-                        raise Exception, "network device " + it_device + " is not correct."
+                        raise Exception("network device " + it_device + " is not correct.")
             else:
                 opts.item_mode['traffic'] = "sum"
 
@@ -553,7 +533,7 @@ def init_sys():
             if opts.items and opts.item_type == "cpu":
                 for it_device in opts.items:
                     if it_device not in cpu_devices:       # validate io item
-                        raise Exception, "cpu device " + it_device + " is not correct."
+                        raise Exception("cpu device " + it_device + " is not correct.")
                 opts.formats_devices['cpu'] = opts.items
             else:
                 opts.formats_devices["cpu"] = ["cpu"]
@@ -575,7 +555,7 @@ def init_irqtop():
     if opts.cpus:
         opts.list_cpu = parse_param_int(opts.cpus)
         if max(opts.list_cpu) >= opts.cpunr:
-            raise Exception, "param2:" + opts.cpus + " is not correct."
+            raise Exception("param2:" + opts.cpus + " is not correct.")
         opts.irq_cpu_filter = True
     else:
         opts.list_cpu = range(0, opts.cpunr)
@@ -587,13 +567,13 @@ def init_irqtop():
         else:
             opts.specs = ["count", "irq", "name"]
     for it_spec in opts.specs:
-        if it_spec not in ["count", "irq", "CPU", "name"]:                                                # validate indicator 
-            raise Exception, it_spec + " is not correct."
+        if it_spec not in ["count", "irq", "CPU", "name"]:                  # validate indicator 
+            raise Exception(it_spec + " is not correct.")
 
     if not opts.sort:
         opts.sort = "c"
     if opts.sort not in ["c", "i"]:                                         # validate sort
-        raise Exception, opts.sort + " is not correct."
+        raise Exception(opts.sort + " is not correct.")
 
     # init items
     opts.items = []
@@ -611,7 +591,7 @@ def init_irqtop():
                 items_tmp.append(i)
         opts.items = items_tmp
         if not opts.items:
-            raise Exception, opts.item + " is not correct."
+            raise Exception(opts.item + " is not correct.")
     else:
         opts.items = opts.irq_names.keys()    
 
@@ -680,7 +660,6 @@ def concatenate_irqtop_interrupts():
     if opts.interval_tsar2:
         scmd += " -i " + opts.interval_tsar2
 
-    #print scmd
     return scmd
 
 def concatenate_irqtop_intr():
@@ -712,7 +691,6 @@ def concatenate_irqtop_intr():
     if opts.interval_tsar2:
         scmd += " -i " + opts.interval_tsar2
 
-    #print scmd
     return scmd
 
 def display_intr_lines(it_line, i):
@@ -775,7 +753,7 @@ def display_intr_lines(it_line, i):
         sorted_datetime = datetime.datetime.strptime(it_collect_datetime, "%Y-%m-%dT%H:%M:%S").strftime("%d/%m/%y-%H:%M")
     
     if i % opts.area_line == 0:
-        print ""
+        print("")
         if not opts.live:
             line_out = '{:<14}'.format("Time")
         else:
@@ -793,7 +771,7 @@ def display_intr_lines(it_line, i):
             if "name" in opts.specs:
                 line_out += " "
                 line_out += '{:-^18}'.format("N"+str(it_order+1))
-        print line_out
+        print(line_out)
         if not opts.live:
             line_out = '{:<14}'.format("Time")
         else:
@@ -811,7 +789,7 @@ def display_intr_lines(it_line, i):
             if "name" in opts.specs:
                 line_out += " "
                 line_out += '{:<18}'.format("name")
-        print line_out
+        print(line_out)
 
     line_out = sorted_datetime
     for it_key, it_value in sorted_line.items():
@@ -834,7 +812,7 @@ def display_intr_lines(it_line, i):
         if "name" in opts.specs:
             line_out += " "
             line_out += '{:<18}'.format(it_name)
-    print line_out
+    print(line_out)
 
 def irqtop_live():
     if opts.irq_cpu_filter:
@@ -1068,7 +1046,7 @@ def concatenate_ssar():
             scmd += "metric=d|cfile=netstat|line_begin=TcpExt:|column={column_num}|alias=netstat_TimeWaitOverflow;".format(column_num=column_TimeWaitOverflow)
             scmd += "metric=d|cfile=netstat|line_begin=TcpExt:|column={column_num}|alias=netstat_FastOpenListenOverflow;".format(column_num=column_FastOpenListenOverflow)
         else:
-            raise Exception, "unrecognized view " + it_view
+            raise Exception("unrecognized view " + it_view)
 
     scmd += "'"
     if opts.formatted_finish:
@@ -1078,7 +1056,6 @@ def concatenate_ssar():
     if opts.interval_tsar2:
         scmd += " -i " + opts.interval_tsar2
 
-    #print scmd
     return scmd
 
 def display_lines(it_line, i, agregates = {}):
@@ -1443,7 +1420,7 @@ def display_lines(it_line, i, agregates = {}):
         it_line['total_pcsw_proc']  = '{:>7}'.format(format_bytes(stat_processes))
 
     if "tcpx" in opts.picks:
-        print "tcpx comming soon."
+        print("tcpx comming soon.")
         sys.exit(200);
 
     if "load" in opts.picks:
@@ -1595,19 +1572,19 @@ def display_lines(it_line, i, agregates = {}):
             line_out = '{:<17}'.format("Time")
         for it_combine in opts.formated:
             line_out += " " + '{:-^{width}}'.format(it_combine['header'], width=get_width(it_combine['view'], it_combine['indicator']))
-        print line_out
+        print(line_out)
         if not opts.live:
             line_out = '{:<14}'.format("Time")
         else:
             line_out = '{:<17}'.format("Time")
         for it_combine in opts.formated:
             line_out += " " + '{:>{width}}'.format(it_combine['indicator'], width=get_width(it_combine['view'], it_combine['indicator']))
-        print line_out
+        print(line_out)
 
     line_out = it_line['datetime']
     for it_combine in opts.formated:
         line_out += " " + it_line[it_combine['item'] + '_' + it_combine['view'] + '_' + it_combine['indicator']]
-    print line_out
+    print(line_out)
 
 def display_agregates(label, func, agregates):
     it_line = {}
@@ -1627,7 +1604,7 @@ def display_agregates(label, func, agregates):
     line_out = '{:<14}'.format(label)
     for it_combine in opts.formated:
         line_out += " " + it_line[it_combine['item'] + '_' + it_combine['view'] + '_' + it_combine['indicator']]
-    print line_out
+    print(line_out)
 
 def report_live_sys():
     ssar_cmd = concatenate_ssar()
@@ -1648,9 +1625,6 @@ def report_sys():
     list_data = []
     if ssar_output.returncode == 0:
         list_data = json.loads(output)
-    #else:
-        #ssar_output.kill()
-        #raise Exception, errors
 
     agregates = {}
     for it_combine in opts.formated:
@@ -1662,7 +1636,7 @@ def report_sys():
         display_lines(it_line, i, agregates)
         i = i+1
 
-    print ""
+    print("")
     display_agregates("MAX",  "max", agregates)
     display_agregates("MEAN", "avg", agregates)
     display_agregates("MIN",  "min", agregates)
@@ -1673,8 +1647,8 @@ def activity_reporter(optl):
     try:
         init_options()
         init_env()
-    except Exception,e:
-        print "Exception: " + str(e)
+    except Exception as e:
+        print("Exception: " + str(e))
         traceback.print_exc()
         sys.exit(200);
 
@@ -1685,10 +1659,10 @@ def activity_reporter(optl):
                 report_live_sys()
             else:
                 report_sys()
-        except KeyboardInterrupt, e:
+        except KeyboardInterrupt as e:
             sys.stdout.write('\n')
-        except Exception,e:
-            print "Exception: " + str(e)
+        except Exception as e:
+            print("Exception: " + str(e))
             traceback.print_exc()
             sys.exit(205);
     elif "irqtop" == opts.cmd:
@@ -1698,10 +1672,10 @@ def activity_reporter(optl):
                 irqtop_live()
             else:
                 irqtop()
-        except KeyboardInterrupt, e:
+        except KeyboardInterrupt as e:
             sys.stdout.write('\n')
-        except Exception,e:
-            print "Exception: " + str(e)
+        except Exception as e:
+            print("Exception: " + str(e))
             traceback.print_exc()
             sys.exit(205);
     elif "procs" == opts.cmd:
@@ -1709,10 +1683,9 @@ def activity_reporter(optl):
     elif "workers" == opts.cmd:
         workers()
     else:
-        print "unidentified cmd: " + opts.cmd
+        print("unidentified cmd: " + opts.cmd)
 
 def main():
-    global opts
     global vi
     global default_vi
     global vi_widths
@@ -1724,7 +1697,6 @@ def main():
     vi['tcp']     = ['active','pasive','iseg','outseg','EstRes','AtmpFa','CurrEs','retran']
     vi['udp']     = ['idgm', 'odgm', 'noport', 'idmerr']
     vi['traffic'] = ['bytin', 'bytout', 'pktin', 'pktout','pkterr','pktdrp']
-    #vi['io']     = ['rrqms', 'wrqms', 'rs', 'ws', 'rsecs', 'wsecs', 'rqsize', 'qusize', 'await', 'svctm', 'util']
     vi['io']      = ['rrqms', 'wrqms', '%rrqm', '%wrqm', 'rs', 'ws', 'rsecs', 'wsecs', 'rqsize', 'rarqsz', 'warqsz', 'qusize', 'await', 'rawait', 'wawait', 'svctm', 'util']
     vi['pcsw']    = ['cswch', 'proc']
     vi['tcpx']    = ['recvq', 'sendq', 'est', 'twait', 'fwait1', 'fwait2', 'lisq', 'lising', 'lisove', 'cnest', 'ndrop', 'edrop', 'rdrop', 'pdrop', 'kdrop']
@@ -1770,7 +1742,6 @@ Examples:
 '''
 
     ItFormatterClass = lambda prog: ItFormatter(prog, max_help_position = MAX_SUB_HELP_POSITION, width = MAX_HELP_WIDTH)
-   #root_parser = argparse.ArgumentParser(formatter_class = ItFormatterClass, description='%(prog)s program is compatible with tsar')
     root_parser = argparse.ArgumentParser(add_help = False, formatter_class = ItFormatterClass, usage = "%(prog)s [OPTIONS] [SUBCOMMAND]", description="%(prog)s program is compatible with tsar", epilog = subcommand_info + root_footer_info)
     groupo = root_parser.add_argument_group('Options')
     groupo.add_argument("-h","--help"    ,dest='root_help',action="store_true",default=False, help = "Display help information")   
@@ -1805,7 +1776,6 @@ Examples:
     groupm.add_argument('--tcpdrop',      dest='tcpdrop'  ,action='store_true',         help='Tcp Drop')
     groupm.add_argument('--tcperr',       dest='tcperr'   ,action='store_true',         help='Tcp Err')
     
-    #opts = root_parser.parse_args()
     common_parser = argparse.ArgumentParser()
     subparsers = common_parser.add_subparsers(dest='cmd')
 
