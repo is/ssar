@@ -245,15 +245,23 @@ int get_process_cmdline(const char* directory, utlbuf_s *ubuf) {
     size_t num;
     size_t total_read = 0;
     int    ret = 0;
+    int    max_loop_time;
+    int    i = 0;
+
+    max_loop_time = (int)(2097152 / GROWWIDTH);
         
     if(!ubuf->buf){
         return -ENOMEM;
     }
     
-    sprintf(path, "%s/cmdline", directory);     
+    sprintf(path, "%s/cmdline", directory);
     fd = open(path, O_RDONLY|O_CLOEXEC|O_NONBLOCK);
     while((num = read(fd, ubuf->buf + total_read, GROWWIDTH)) > 0){
+        if(i > max_loop_time){
+            break;
+        }
         total_read += num;
+        i++;
 
         if(total_read + GROWWIDTH >= ubuf->len){
             ubuf->len += GROWWIDTH;
@@ -262,8 +270,8 @@ int get_process_cmdline(const char* directory, utlbuf_s *ubuf) {
     };
     ubuf->buf[total_read] = '\0';
     if(total_read > 0){
-        for(size_t i = 0; i < total_read - 1; i++){
-            if(ubuf->buf[i] == '\0'){
+        for(size_t i = 0; i < total_read; i++){
+            if(ubuf->buf[i] == '\0' || ubuf->buf[i] == '\x9' || ubuf->buf[i] == '\xa'){
                 ubuf->buf[i] = ' ';
             }
         }

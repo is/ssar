@@ -7,7 +7,7 @@
 
 #include "utils.h"
 
-#define PROCPATHLEN    64                            // must hold /proc/2000222000/task/2000222000/cmdline
+#define PROCPATHLEN    512                            // must hold /proc/2000222000/task/2000222000/cmdline
 #define GROWWIDTH      512
 #define WHITESPACE     " \t\n\r"
 

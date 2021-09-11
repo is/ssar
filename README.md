@@ -37,16 +37,26 @@ Of course, collecting more data requires more disk storage. In the last 20 years
 
 To use, there are several methods:
 
+### Provide packages
+
+The project provides several packages for direct use.
+
+```bash
+$ git clone https://codeup.openanolis.cn/codeup/tracing_diagnosis/ssar.git
+$ ls ssar/package/
+ssar-1.0.1-1.an8.x86_64.rpm ssar-1.0.1-1.el7.x86_64.rpm ssar_1.0-1_amd64.deb
+```
+
 ### AnolisOS CentOS
 
 Method under AnolisOS and centos.
 
 ```bash
-$ yum install zlib-devel
-$ yum install rpm-build rpmdevtools 
+$ yum install zlib-devel gcc-c++
+$ yum install rpm-build rpmdevtools git
 $ rpmdev-setuptree
 $ cd ~/
-$ git clone <project git>
+$ git clone https://codeup.openanolis.cn/codeup/tracing_diagnosis/ssar.git
 $ cp -fr ~/ssar/* ~/rpmbuild/SOURCES/
 $ cd ~/rpmbuild/
 $ cp SOURCES/spec/ssar.spec SPECS/
@@ -61,9 +71,10 @@ $ sudo rpm -e ssar                                             # remove package
 Method under Ubuntu.
 
 ```bash
-$ apt install zlib1g-dev
+$ apt-get update
+$ apt install zlib1g-dev git
 $ cd ~/
-$ $ git clone <project git>
+$ git clone https://codeup.openanolis.cn/codeup/tracing_diagnosis/ssar.git
 $ cd debian
 $ ./build.sh
 $ dpkg -i ssar_1.0-1_amd64.deb
@@ -77,7 +88,7 @@ Source code installation method (not recommended).
 ```bash
 $ yum install zlib-devel                                       # ubuntu need zlib1g-dev
 $ cd ~/
-$ git clone <project git>
+$ git clone https://codeup.openanolis.cn/codeup/tracing_diagnosis/ssar.git
 $ make 
 $ sudo make install
 $ sudo make uninstall                                          # remove                                   
@@ -126,12 +137,15 @@ $ tsar2 --io -I sda,sda3,sdb1         # You can display indicators of both the s
 $ tsar2 --cpu -I cpu,cpu1,cpu4        # It can display the performance indicators of both the entire CPU and a single CPU
 $ tsar2 --traffic -I eth0,lo          # You can display indicators for both eth0 and lo
 $ tsar2 --retran                      # Display detailed information about TCP retransmission
+$ tsar2 --tcpofo                      # Display detailed information about Tcp Out-Of-Order
+$ tsar2 --tcpdrop                     # Display detailed information about Tcp Drop
+$ tsar2 --tcperr                      # Display detailed information about Tcp Err
 $ tsar2 irqtop -C 7,30-32             # Displays interrupt details for cpus 7 and 30 through 32
 ```
 
 ## Reference
 
-for more usage with ssar tools，visit reference, [查看参考手册](./Reference_zh-CN.md)
+for more usage with ssar tools，visit reference，[查看参考手册](./Reference_zh-CN.md)
 
 ## LICENSE
 

@@ -27,9 +27,9 @@ typedef struct{
     int load_collect_interval;
     bool stack_sample_disable;
     bool proc_gzip_disable;
-    int load5s_flag;
-    int proc_flag;
-    int sys_flag;
+    bool load5s_flag;
+    bool proc_flag;
+    bool sys_flag;
     char work_path[WORK_PATH_SIZE];
     char sys_srcs[COLLECT_SIZE][8 * FILE_SIZE];
     char sys_targets[COLLECT_SIZE][FILE_SIZE];

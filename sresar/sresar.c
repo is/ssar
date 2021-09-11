@@ -55,7 +55,7 @@
 #include "readprocess.h"
 #include "sresar.h"
 
-#define BUF_SIZE           256
+#define BUF_SIZE           512
 #define LIST_SIZE          16
 #define EPL_TOUT           200000
 #define EPOLL_MAX_NUM      10 
@@ -70,9 +70,9 @@
 #define THREAD_ERROR(format, ...)                                     \
     saved_errno =  errno;                                             \
     get_current_datetime_ms(gbuf);                                    \
-    snprintf(basic_msg, BUF_SIZE, "DATETIME: %s, FUNCTION: %s, CODE: %d, ERROR: %s, INFO:", gbuf, __func__, saved_errno, strerror_r(saved_errno,ebuf,BUF_SIZE));\
-    snprintf(user_msg, BUF_SIZE, format,  ##__VA_ARGS__);             \
-    snprintf(full_msg, BUF_SIZE, "%s %s\n", basic_msg, user_msg);     \
+    snprintf(basic_msg, BUF_SIZE*4-1, "DATETIME: %s, FUNCTION: %s, CODE: %d, ERROR: %s, INFO:", gbuf, __func__, saved_errno, strerror_r(saved_errno,ebuf,BUF_SIZE));\
+    snprintf(user_msg, BUF_SIZE*4-1, format,  ##__VA_ARGS__);             \
+    snprintf(full_msg, BUF_SIZE*9-1, "%s %s\n", basic_msg, user_msg);     \
     fputs(full_msg, opts->sresar_stderr);                       \
     fflush(opts->sresar_stderr);                                \
     opts->return_value = saved_errno
@@ -80,9 +80,9 @@
 
 #define THREAD_INFO(format, ...)                                      \
     get_current_datetime_ms(gbuf);                                    \
-    snprintf(basic_msg, BUF_SIZE, "DATETIME: %s, FUNCTION: %s, INFO:", gbuf, __func__);\
-    snprintf(user_msg, BUF_SIZE, format,  ##__VA_ARGS__);             \
-    snprintf(full_msg, BUF_SIZE, "%s %s\n", basic_msg, user_msg);     \
+    snprintf(basic_msg, BUF_SIZE*4-1, "DATETIME: %s, FUNCTION: %s, INFO:", gbuf, __func__);\
+    snprintf(user_msg, BUF_SIZE*4-1, format,  ##__VA_ARGS__);             \
+    snprintf(full_msg, BUF_SIZE*9-1, "%s %s\n", basic_msg, user_msg);     \
     fputs(full_msg, opts->sresar_stderr);                       \
     fflush(opts->sresar_stderr);                                \
 
@@ -93,9 +93,9 @@ const char *second_format = "%Y%m%d%H%M%S";
 __thread int  saved_errno;
 __thread char gbuf[BUF_SIZE];
 __thread char ebuf[BUF_SIZE];
-__thread char user_msg[BUF_SIZE];
-__thread char basic_msg[BUF_SIZE];
-__thread char full_msg[BUF_SIZE];
+__thread char user_msg[BUF_SIZE * 4];
+__thread char basic_msg[BUF_SIZE * 4];
+__thread char full_msg[BUF_SIZE * 9];
 
 
 /***********************************************************************************
@@ -584,7 +584,7 @@ int sresar_live(seq_options *opts){
 
 int snapsys(seq_options *opts){
     char sys_buf[4096];
-    char target_file[2 * WORK_PATH_SIZE];
+    char target_file[8 * WORK_PATH_SIZE];
     FILE* src_fp;
     gzFile target_fp;
     int src_fd;
@@ -834,7 +834,7 @@ int sresar_daemon(seq_options *opts){
         return -1;
     }
 
-    char sresar_file[256];
+    char sresar_file[8 * WORK_PATH_SIZE];
     get_current_datetime(gbuf);
     int sresar_fd;
     gzFile sresar_fp = NULL;
@@ -1063,7 +1063,7 @@ int get_cmdinfo(seq_options *opts, cmdinfo_t *cmdinfo, utlbuf_s *ubuf, utlbuf_s 
         return -1;
     }
 
-    char sresar_file[256];
+    char sresar_file[8 * WORK_PATH_SIZE];
     get_current_datetime(gbuf);
     int sresar_fd;
     gzFile sresar_fp = NULL;
@@ -1293,7 +1293,7 @@ int loadrd(seq_options *opts, utlarr_i *uarr, utlbuf_s *ubuf, utlbuf_s *ufbuf){
     get_current_datetime(loadrd_datetime);
     FILE *loadrd_stdout;
     if(SRC_DAEMON == opts->src){
-        char loadrd_file[256];
+        char loadrd_file[8 * WORK_PATH_SIZE];
         sprintf(loadrd_file, "%s%s_loadrd", opts->data_path_hour, loadrd_datetime);
         loadrd_stdout = fopen(loadrd_file, "w");
     }else if(SRC_LOADRD == opts->src){
@@ -1303,7 +1303,7 @@ int loadrd(seq_options *opts, utlarr_i *uarr, utlbuf_s *ubuf, utlbuf_s *ufbuf){
     if(opts->src == SRC_LOADRD){
         printf("state tid tgid psr prio cmd\n");
     }
-    while(pc = mini_read_proc(ptp)){
+    while((pc = mini_read_proc(ptp))){
         while(read_task(ptp, &tk, pc)){
             if(SRC_DAEMON == opts->src){
                 ret = fprintf(loadrd_stdout,"%c %d %d %d %ld %s\n", tk.state, tk.tid, tk.tgid, tk.processor, tk.prio, tk.cmd);
@@ -1329,7 +1329,7 @@ int loadrd(seq_options *opts, utlarr_i *uarr, utlbuf_s *ubuf, utlbuf_s *ufbuf){
     if(SRC_DAEMON == opts->src || SRC_STACK == opts->src){
         FILE *stack_stdout;
         if(SRC_DAEMON == opts->src){
-            char sresar_file[256];
+            char sresar_file[8 * WORK_PATH_SIZE];
             sprintf(sresar_file, "%s%s_stack", opts->data_path_hour, loadrd_datetime);
             stack_stdout = fopen(sresar_file, "w");
         }else{
@@ -1765,7 +1765,7 @@ int pid_unlock(seq_options *opts){
 void init_option(seq_options *opts,int argc, char* argv[]){
     unsigned char opt;
     int src_set = 0;
-    while(opt = getopt(argc, argv, ":LDSh")){
+    while((opt = getopt(argc, argv, ":LDSh"))){
         if(opt == 255){                                            // 0xff
             break;
         }
@@ -1923,23 +1923,23 @@ int init_basic_config(seq_options* opts){
                 exit(150);
             }
         }else if(!strcmp(i_key, "load5s_flag")){
-            if(toml_rtoi(i_value, &i_num)){
+            if(toml_rtob(i_value, &i_bool)){
                 fprintf(opts->sresar_stderr, "load5s_flag %s is not correct.\n", i_value);
                 exit(150);
             }
-            opts->load5s_flag = i_num;
+            opts->load5s_flag = i_bool;
         }else if(!strcmp(i_key, "proc_flag")){
-            if(toml_rtoi(i_value, &i_num)){
+            if(toml_rtob(i_value, &i_bool)){
                 fprintf(opts->sresar_stderr, "proc_flag %s is not correct.\n", i_value);
                 exit(150);
             }
-            opts->proc_flag = i_num;
+            opts->proc_flag = i_bool;
         }else if(!strcmp(i_key, "sys_flag")){
-            if(toml_rtoi(i_value, &i_num)){
+            if(toml_rtob(i_value, &i_bool)){
                 fprintf(opts->sresar_stderr, "sys_flag %s is not correct.\n", i_value);
                 exit(150);
             }
-            opts->sys_flag = i_num;
+            opts->sys_flag = i_bool;
         }else{
             return 0;                                                  // unknown section/name, error
         }
@@ -2368,9 +2368,9 @@ int main(int argc, char* argv[]){
         .proc_gzip_disable = false,                                // if true, will disable process-info gzip
         .stack_sample_disable = false,                             // if true, will collect all D state task stack
         .realtime_priority = 0,                                    // load1 and loadrd threads realtime priority
-        .load5s_flag = 1,                                          // 1 enable load5s collect, 0 disble.
-        .proc_flag = 1,                                            // 1 enable procs collect, 0 disble.
-        .sys_flag = 1,                                             // 1 enable sys collect, 0 disble.
+        .load5s_flag = true,                                       // true will enable load5s collect, false disble.
+        .proc_flag = true,                                         // true will enable procs collect,  false disble.
+        .sys_flag = true,                                          // true will enable sys collect,    false disble.
     };
     seq_options* opts = &it_option;
 
