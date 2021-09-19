@@ -75,13 +75,14 @@
     * [13.2、输入选项说明](#输入选项说明)
     * [13.3、大C选项参数特殊说明](#大C选项参数特殊说明)
     * [13.4、interrupts数据采集](#interrupts数据采集)  
-* [十四、增强查询器ssar+](#增强查询器ssar+)
-* [十五、技术交流](#技术交流)
+* [十四、tsar2的CPU子命令cputop](#tsar2的CPU子命令cputop)
+* [十五、增强查询器ssar+](#增强查询器ssar+)
+* [十六、技术交流](#技术交流)
 
 <a name="工具介绍"/>
 # 一、工具介绍
 
-　　ssar(Site Reliability Engineers System Activity Reporter)是系统活动报告sar工具家族中崭新的一个。它几乎涵盖了传统sar工具的大部分主要功能之外，还扩展了更多的整机指标；新增了进程级指标和特色的load指标。
+　　ssar(Site Reliability Engineers System Activity Reporter)是系统活动报告sar工具家族中崭新的一个。在几乎涵盖了传统sar工具的大部分主要功能之外，它还扩展了更多的整机指标；新增了进程级指标和特色的load指标。
 
 <a name="工具特点"/>
 # 二、工具特点
@@ -111,7 +112,9 @@
 ```bash
 $ git clone https://codeup.openanolis.cn/codeup/tracing_diagnosis/ssar.git
 $ ls ssar/package/
-ssar-1.0.1-1.an8.x86_64.rpm ssar-1.0.1-1.el7.x86_64.rpm ssar_1.0-1_amd64.deb
+ssar-1.0.1-1.an8.x86_64.rpm                 # 适用于 anolisos 和 centos8
+ssar-1.0.1-1.el7.x86_64.rpm                 # 适用于 centos7
+ssar_1.0-1_amd64.deb                        # 适用于 ubuntu
 ```
 
 <a name="rpm包打包方法"/>
@@ -251,7 +254,7 @@ $ ssar --cpu -O shmem,memfree   # 在cpu视图的指标基础上，追加输出s
 <a name="整机自定义指标说明"/>
 ## 4.4、整机自定义指标说明
 
-　　如果有些指标工具没有定义也没有关系，我们可以直接在命令行中获取指标。自定义指标同样适用小o和大O选项输出。
+　　如果有些指标本工具没有定义也没有关系，我们可以直接在命令行中获取指标。自定义指标同样适用小o和大O选项输出。
 
 ```bash
 $ ssar -O shmem,meminfo:2:2            # 预定义指标和自定义指标可以同时存在；
@@ -259,7 +262,7 @@ $ ssar -o 'meminfo:2:2,snmp|8|11|d'    # 指标和指标之间可以用逗号","
 $ ssar -o "dev|eth0:|2|d;snmp:8:11:d"  # 指标和指标之间可以用分号";"做分隔符；
 ```
 
-　　指标内的分隔符可以是冒号“:”，也可以是竖线"|"。指标说明：
+　　指标间的分隔符可以是分号“;”，也可以是逗号","。指标内的分隔符可以是冒号“:”，也可以是竖线"|"。指标说明：
 
 * 指标“meminfo:2:2”表示meminfo伪文件中第2行的第2列的数据；
 
@@ -753,7 +756,7 @@ $ ssar procs --cpu -O cmdline         # 在cpu视图的指标基础上，追加�
 <a name="单进程参数说明"/>
 ## 6.1、单进程参数说明
 
-　　多进程指标以proc为子命令，运行ssar proc --help即可获取帮助信息，下面以实例形式分别介绍。
+　　单进程指标以proc为子命令，运行ssar proc --help即可获取帮助信息，下面以实例形式分别介绍。
 
 ```bash
 $ ssar proc --help                        # 获取整机指标帮助信息
@@ -784,7 +787,7 @@ $ ssar proc -p 1 --mem                    # 进程内存类指标组合
 　　以cpu视图为例，默认包含collect_datetime、etime、cputime、cpu_utime、cpu_stime、pcpu、pucpu、pscpu、vcswchs、ncswchs、s和cmd指标信息。  
 
 ```bash
-$ssar proc -i 1 -p 224360 --cpu
+$ ssar proc -i 1 -p 224360 --cpu
 
 collect_datetime            etime       cputime     cpu_utime     cpu_stime    pcpu   pucpu   pscpu vcswchs ncswchs s cmd             
 2021-08-21T11:40:00             <             <             <             <       <       <       <       <       < < <               
@@ -904,7 +907,7 @@ collect_datetime       threads    load1   runq load5s stype sstate zstate    act
 
 * 字段actr_rto：表示actr对runq的代表性，正常情况下应该接近100%，否则load详情信息的代表性较差。
 
-* 字段actd：如果触发采集，此值为成功采集的D状态线程的个数；否则值为-。。
+* 字段actd：如果触发采集，此值为成功采集的D状态线程的个数；否则值为-。
 
 <a name="特异指标load5s深入说明"/>
 ## 7.3、特异指标load5s深入说明
@@ -943,7 +946,7 @@ $ ssar load2p -c 2020-10-07T07:45:25 --loadd --stack # 同时显示loadd和stack
 
 　　详情聚合视图一共4个loadr、loadd、psr和stackinfo，下面分别介绍：
 
-* 视图loadr，是对R状态线程采集数actr的详细展示。第一列count值是对s和pid两列进行聚合的值。下面第一行表示R状态的pid为44440的线程数为26，后面cmd和cmdline是pid 44440的详细进程名信息。其中第一列所有行count值之和等于前面load5s子命令中同一时刻的actr值。
+* 视图loadr，是对R状态线程采集数actr的详细展示。第一列count值是对s和pid两列进行聚合的值。下面第一行表示R状态的pid为60220的线程数为32，后面cmd和cmdline是pid 60220的详细进程名信息。其中第一列所有行count值之和等于前面load5s子命令中同一时刻的actr值。
 
 ```bash
 $ ssar load2p -c 2021-08-21T06:45:40 --loadr
@@ -955,7 +958,7 @@ $ ssar load2p -c 2021-08-21T06:45:40 --loadr
        1 R   43568 start           /home/tops/bin/python2.7 /opt/local_run/2589817/start 
 ```
 
-* 视图loadd，是对D状态线程采集数actd的详细展示。第一列count值是对s和pid两列进行聚合的值。下面第一行表示D状态的pid为95526的线程数为274，后面cmd和cmdline是pid 95526的详细进程名信息。其中第一列所有行count值之和等于前面load5s子命令中同一时刻的actd值。
+* 视图loadd，是对D状态线程采集数actd的详细展示。第一列count值是对s和pid两列进行聚合的值。下面第一行表示D状态的pid为230576的线程数为21，后面cmd和cmdline是pid 230576的详细进程名信息。其中第一列所有行count值之和等于前面load5s子命令中同一时刻的actd值。
 
 ```bash
 $ ssar load2p -c 2021-08-20T14:45:04 --loadd
@@ -968,7 +971,7 @@ $ ssar load2p -c 2021-08-20T14:45:04 --loadd
        3 D  233153 crond           /sbin/crond
 ```
 
-* 视图psr，对loadr信息的补充。主要反映CPU调度不均和cgroup绑核不均问题。第一行表示运行在69号CPU上的R状态线程有81个。
+* 视图psr，对loadr信息的补充。主要反映CPU调度不均和cgroup绑核不均问题。第一行表示运行在34号CPU上的R状态线程有150个。
 
 ```bash
 ssar load2p -c 2021-08-20T14:41:49 --psr
@@ -980,7 +983,7 @@ ssar load2p -c 2021-08-20T14:41:49 --psr
        5  48 
 ```
 
-* 视图stackinfo，是对D状态线程的另外一个角度的展示。第一行表示D状态线程中调用栈为call_rwsem_down_read_failed,__do_page_fault,do_page_fault,page_fault的线程数占总体D状态线程数的百分比是87%。其中栈顶函数为call_rwsem_down_read_failed，栈顶函数符号的后6位为319104。
+* 视图stackinfo，是对D状态线程的另外一个角度的展示。第一行表示D状态线程中调用栈为call_rwsem_down_read_failed,__do_page_fault,do_page_fault,page_fault的线程数占总体D状态线程数的百分比是80%。其中栈顶函数为call_rwsem_down_read_failed，栈顶函数符号的后6位为3003d4。
 
 ```bash
 $ ssar load2p -c 2021-08-20T14:41:49 --stackinfo
@@ -1033,7 +1036,7 @@ R  258231  190367  22  120 start
 
 　　ssar工具整体上分为3部分：数据采集器进程sresar、通用查询器进程ssar、增强查询器进程ssar+和古典查询器tsar2。
 
-* 进程sresar以守护进程模式常驻，负责周期性的采集系统数据。数据存储在文件系统路径/home/admin/sre_proc（具体通过配置文件配置）。
+* 进程sresar以守护进程模式常驻，负责周期性的采集系统数据。数据存储在文件系统路径/var/log/sre_proc（具体通过配置文件配置）。
 
 * 进程ssar读取采集的数据，负责为用户提供通用的数据查询功能。
 
@@ -1044,7 +1047,7 @@ R  258231  190367  22  120 start
 <a name="ssar工作目录"/>
 ## 9.2、ssar工作目录
 
-　　ssar工具的工作目录由配置文件/etc/ssar/ssar.conf中的work_path='/home/admin'选项配置，如配置文件被删除或本机无/home/admin工作目录，则默认为/var/log/目录生效。work_path路径下是项目根目录sre_proc及其下子目录和文件，具体如下：
+　　ssar工具的工作目录由配置文件/etc/ssar/ssar.conf中的work_path='/var/log'选项配置，如配置文件被删除，则默认为/var/log/目录生效。work_path路径下是项目根目录sre_proc及其下子目录和文件，具体如下：
 
 ```bash
 sre_proc/                                             # 工具根目录
@@ -1052,7 +1055,7 @@ sre_proc/log/                                         # 工具日志存储目录
 sre_proc/log/2020093021_sresar.log                    # 工具日志文件，按小时存储
 sre_proc/data/                                        # 工具数据存储目录
 sre_proc/data/2020093021/                             # 工具数据存储子目录，按小时存储
-sre_proc/data/2020093021/20200930215700_sresar25.gz   # 进程数据，按分钟存储，压缩格式
+sre_proc/data/2020093021/20200930215700_sresar24.gz   # 进程数据，按分钟存储，压缩格式
 sre_proc/data/2020093021/2020093021_load5s            # 整机load数据，按小时存储
 sre_proc/data/2020093021/20200930215919_loadrd        # 整机load详情数据，按需存储
 sre_proc/data/2020093021/20200930215919_stack         # D状态调用栈数据，按需存储
@@ -1067,16 +1070,16 @@ sre_proc/data/2020093021/20200930215900_stat          # 除以上外，皆为整
 ```bash
 $ cat /etc/ssar/ssar.conf
 [main]
-duration_threshold=360               # 采集数据保存360个小时，最老的数据会被自动清理
-inode_use_threshold=90               # 数据所在分区磁盘inode大于90%开始清理老数据，无法清理时则停止采集
-disk_use_threshold=90                # 数据所在分区磁盘容量大于90%开始清理老数据，无法清理时则停止采集
-disk_available_threshold=10000       # 数据所在分区磁盘容量小于10G开始清理老数据，无法清理时则停止采集
-duration_restart=100                 # 每100小时守护进程重启一次，无特别业务意义
-work_path='/var/log/'                # 工具的工作目录
-scatter_second=0                     # 分钟级采集数据的打散偏移秒数，删除则随机产生。
-load5s_flag=0                        # 单独关闭load信息采集，缺省打开采集
-proc_flag=0                          # 单独关闭进程级信息采集，缺省打开采集
-sys_flag=0                           # 单独关闭整机指标信息采集，缺省打开采集
+duration_threshold=168                           # 采集数据保存168个小时，最老的数据会被自动清理
+inode_use_threshold=90                           # 数据所在分区磁盘inode大于90%开始清理老数据，无法清理时则停止采集
+disk_use_threshold=90                            # 数据所在分区磁盘容量大于90%开始清理老数据，无法清理时则停止采集
+disk_available_threshold=10000                   # 数据所在分区磁盘容量小于10G开始清理老数据，无法清理时则停止采集
+duration_restart=10                              # 每10小时守护进程重启一次，无特别业务意义
+work_path='/var/log'                             # 工具的工作目录
+scatter_second=0                                 # 分钟级采集数据的打散偏移秒数，删除则随机产生。
+load5s_flag=false                                # 单独关闭load信息采集，缺省打开采集
+proc_flag=false                                  # 单独关闭进程级信息采集，缺省打开采集
+sys_flag=false                                   # 独关闭整机指标信息采集，缺省打开采集
 ```
 
 <a name="数据采集器load选项配置"/>
@@ -1090,6 +1093,7 @@ $ cat /etc/ssar/ssar.conf
 load5s_threshold=4                   # 当load5s类型是5s，且大于CPU核数4倍时触发load详情采集。
 load1m_threshold=4                   # 当load5s类型是1m，且大于CPU核数4倍时触发load详情采集。
 realtime_priority=2                  # load详情采集线程优先级，值域[1-99]实时线程，0表示普通线程
+stack_sample_disable=true            # 打开采集所有D状态线程调用栈，默认随机采集
 ```
 
 <a name="数据采集器整机选项配置"/>
@@ -1129,9 +1133,9 @@ default=[
 
 * 配置文件采用ini格式的增强格式toml格式，因此这里可以使配置文件的内容更加丰满。
 
-* 支持层叠式配置，有特殊配置的情况特殊配置生效，如“3.10.0-327.ali2008.odps.”，无特殊配置情况default生效。
+* 支持层叠式配置，有特殊配置的情况特殊配置生效，如“3.10.0-327”，无特殊配置情况default生效。
 
-* 多个特殊配置情况，信息更完整的生效，如“3.10.0-327.ali2008.odps.”会优先“3.10.0-”生效。
+* 多个特殊配置情况，信息更完整的生效，如“3.10.0-327”会优先“3.10.0-”生效。
 
 * 以snmp部分为例，src_path="/proc/net/snmp"表示采集文件位置为/proc/net/snmp，cfile="snmp"表示采集的文件保存到数据目录的文件名后缀为snmp。
 
@@ -1226,7 +1230,7 @@ allocstall    = {cfile="vmstat",line_begin="allocstall_normal",column=2, width=1
 <a name="通用查询器整机指标组作用优先级"/>
 ## 10.4、通用查询器整机指标组作用优先级
 
-　　如果有一台机器的内核release信息是4.9.151-015.ali3000.alios7.x86_64（通过uname -r获取），同时有如下几个指标组，那么指标组针对这个内核版本的作用优先级依次为：
+　　如果有一台机器的内核release信息是4.9.151-015.x86_64（通过uname -r获取），同时有如下几个指标组，那么指标组针对这个内核版本的作用优先级依次为：
 
 ```bash
 [indicator."4.9.151-015."]
@@ -1240,7 +1244,7 @@ allocstall    = {cfile="vmstat",line_begin="allocstall_normal",column=2, width=1
 <a name="古典查询器tsar2"/>
 # 十一、古典查询器tsar2
 
-　　Tsar是公司内外一款非常经典的sar类型工具，很多同学在日常调查问题中都会经常用到。Tsar2在选项参数和输出格式方面和tsar基本保持一致和兼容。相比较而言，Tsar2有如下3方面的特点：
+　　Tsar是业界一款非常经典的sar类型工具，很多同学在日常调查问题中都会经常用到。Tsar2在选项参数和输出格式方面和tsar基本保持一致和兼容。相比较而言，Tsar2有如下3方面的特点：
 
 * Tsar2的数据完整性更强。由于一些原因，当整机处于异常的状态，tsar采集数据的过程可能会受阻，此时会出现连续若干分钟的数据指标缺失的问题。tsar2采用更加鲁棒的采集方式，数据断图的发生概率相比大大降低，将更加有助于诊断机器异常状态的系统问题。
 
@@ -1251,7 +1255,7 @@ allocstall    = {cfile="vmstat",line_begin="allocstall_normal",column=2, width=1
 <a name="时间范围类选项"/>
 ## 11.1、时间范围类选项
 
-　　Tsar的时间范围类选项一共有4个，分别是--date、--ndays、--watch和--live，这4个选项在内在逻辑上是互斥的，就是说同一个tsar命令里，只有一个能生效。tsar并没有限制这4个选项的同时使用，你最多甚至可以把4个选项都一起写上，这样就容易给使用者增加混乱。Tsar2为了避免这种混乱，在用户使用时，就强制用户只能选择其中一个选项使用。
+　　Tsar的时间范围类选项一共有4个，分别是--date、--ndays、--watch和--live，这4个选项在内在逻辑上是互斥的，就是说同一个tsar命令里，只有一个能生效。Tsar2为了避免这种混乱，在用户使用时，就强制用户只能选择其中一个选项使用。
 
 <a name="date选项"/>
 ### 11.1.1、date选项
@@ -1261,7 +1265,7 @@ allocstall    = {cfile="vmstat",line_begin="allocstall_normal",column=2, width=1
 <a name="ndays选项"/>
 #### 11.1.2、ndays选项
 
-　　ndays选项，简写-n，用于指定以当前时刻为基准的n天前时间范围，时间跨度固定为24小时的整倍数。例如--ndays 3，表示开始时刻是现在时刻的3×24小时前，结束时刻是现在时刻。如果4个时间范围选项均不选，默认为ndays选项生效，且默认参数值为1。
+　　ndays选项，简写-n，用于指定以当前时刻为基准的n天前时间范围，时间跨度固定为24小时的整倍数。例如--ndays 3，表示开始时刻是现在时刻的3×24小时前，结束时刻是现在时刻。
 
 <a name="watch选项"/>
 #### 11.1.3、watch选项
@@ -1269,6 +1273,7 @@ allocstall    = {cfile="vmstat",line_begin="allocstall_normal",column=2, width=1
 　　watch选项，简写-w，用于指定以当前时刻到n分种前的时间范围。例如--watch 60，表示从60分钟前到当前时刻的时间范围，注意这里仅仅表示时间跨度是60分钟，具体多少条数据显示，还需要结合时间间隔选项。
 
 　　finish选项，简写-f，用于指定查询的时间范围的结束时刻。通常可以和-w选项结合使用，或单独使用也可。
+　　如果前面时间范围选项均不选，默认为watch选项生效，且默认参数值为300。
 
 ```bash
 tsar2 -f -10                         # 当前时刻之前10分钟为结束时刻 
@@ -1595,7 +1600,7 @@ Time              util    util    idgm    odgm  noport  idmerr
 <a name="网络tcp扩展指标"/>
 ## 12.1、网络tcp扩展指标
 
-　　tsar在诊断网络问题时，提供了tcp类指标组合，在实际应对生产中网络tcp类问题时还远远不够，内核团队@无牙 针对tcp问题的诊断，细化了4组指标组合。
+　　tsar在诊断网络问题时，提供了tcp类指标组合，在实际应对生产中网络tcp类问题时还远远不够，我们针对tcp问题的诊断，细化了4组指标组合。
 
 　　当我们发现tsar/tsar2的tcp视图中的retran重传率指标异常时，可以通过这个--retran指标组合进一步查看网络重传的更丰满的信息。
 
@@ -1729,11 +1734,45 @@ $ vim /etc/ssar/sys.conf
 $ sudo systemctl restart sresar                          # 修改完配置文件后，重启采集进程生效 
 ```
 
+<a name="tsar2的CPU子命令cputop"/>
+# 十四、tsar2的CPU子命令cputop
+
+　　在多核CPU情况下，尽管内核的调度算法会尽量让CPU的使用在各个核中平均分配，但包括中断使用内的各种原因，让然会让各个CPU的CPU使用率并不均衡。tsar2的cputop子命令能很好的显示历史和实时的各个cpu之间的不均衡。
+
+
+```bash
+$ tsar2 cputop -l -i 1 -F 3 -S sirq
+
+Time              --N1-- N1- -N1- --N2-- N2- -N2- --N3-- N3- -N3-
+Time               value cpu idct  value cpu idct  value cpu idct
+19/09/21-16:11:51   2.97  47 sirq   1.98  81 sirq   1.01  92 sirq
+19/09/21-16:11:52   4.17  27 sirq   4.08  47 sirq   4.04  26 sirq
+19/09/21-16:11:53   1.98  85 sirq   1.02  47 sirq   1.01  92 sirq
+19/09/21-16:11:54   2.02  27 sirq   1.98  81 sirq   1.00  26 sirq
+19/09/21-16:11:55   1.98  46 sirq   1.96  76 sirq   1.96  47 sirq
+```
+
+　　默认情况下，按照cpu util进行降序排序，使用-S选项可以指定按软中断CPU利用率sirq进行降序排序。N1下为Top One的CPU的利用率value、cpu核号cpu和指标名idct。
+
+```bash
+$ tsar2 cputop -l -i 1 -F 3 -S idle -r -I 0-63
+
+Time              --N1-- N1- -N1- --N2-- N2- -N2- --N3-- N3- -N3-
+Time               value cpu idct  value cpu idct  value cpu idct
+19/09/21-16:20:23   0.00  46 idle   0.00  37 idle   0.00  35 idle
+19/09/21-16:20:24   0.00   1 idle   0.00  46 idle   0.00  37 idle
+19/09/21-16:20:25   0.00   1 idle   0.00  46 idle   0.00  37 idle
+19/09/21-16:20:26   0.00   1 idle   0.00  46 idle   0.00  30 idle
+19/09/21-16:20:27   0.00  46 idle   0.00  30 idle   0.00  37 idle
+```
+
+　　我们还可以选择按照CPU空闲的idle进行排序，-r选项选中则按照升序排序。大I选项参数指定参与排序的cpu核号列表。
+
 <a name="增强查询器ssar+"/>
-# 十四、增强查询器ssar+
+# 十五、增强查询器ssar+
 
 　　功能规划中
 
-# 十五、技术交流
+# 十六、技术交流
 
 　　ssar工具还在不断开发和优化过程中，如果大家觉得工具使用有任何疑问、对工具功能有新的建议，或者想贡献代码给ssar工具，请加群交流和反馈信息。钉钉群号：33304007。

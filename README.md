@@ -141,6 +141,7 @@ $ tsar2 --tcpofo                      # Display detailed information about Tcp O
 $ tsar2 --tcpdrop                     # Display detailed information about Tcp Drop
 $ tsar2 --tcperr                      # Display detailed information about Tcp Err
 $ tsar2 irqtop -C 7,30-32             # Displays interrupt details for cpus 7 and 30 through 32
+$ tsar2 cputop -l -i 1 -S sirq        # Displays the top 4 softirq cpu usage of all cpu
 ```
 
 ## Reference

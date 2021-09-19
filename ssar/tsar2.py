@@ -329,6 +329,8 @@ def init_options():
         opts.name = False
     if "all" not in opts:
         opts.all = False
+    if "reverse" not in opts:
+        opts.reverse = False
 
     check_option_exclusive()
 
@@ -356,7 +358,17 @@ def init_options():
             it_finish_min = 1440 - 1440 % int(opts.interval_tsar2)
         it_finish = it_begin + timedelta(minutes=(it_finish_min))
         opts.formatted_finish = it_finish.strftime("%Y-%m-%dT%H:%M:%S")
-    elif opts.watch or opts.finish:
+    elif opts.ndays:
+        if opts.ndays == 0:
+            opts.ndays = 1;
+        now_timestamp = int(time.time())
+        adjustive_timestamp = now_timestamp - now_timestamp % (60 * int(opts.interval_tsar2))
+        head_timestamp = adjustive_timestamp - 86400 * opts.ndays
+        opts.begin = datetime.datetime.fromtimestamp(head_timestamp).strftime("%Y-%m-%dT%H:%M:%S")
+        it_finish_min = 1440 * opts.ndays - 1440 % int(opts.interval_tsar2)
+        it_finish = datetime.datetime.fromtimestamp(head_timestamp) + timedelta(minutes=(it_finish_min))
+        opts.formatted_finish = it_finish.strftime("%Y-%m-%dT%H:%M:%S")
+    else:
         if not opts.watch:
             opts.watch = 300
         now_timestamp = int(time.time())
@@ -386,18 +398,6 @@ def init_options():
         head_timestamp = adjustive_timestamp - 60 * opts.watch
         opts.begin = datetime.datetime.fromtimestamp(head_timestamp).strftime("%Y-%m-%dT%H:%M:%S")
         it_finish_min = opts.watch - opts.watch % int(opts.interval_tsar2)
-        it_finish = datetime.datetime.fromtimestamp(head_timestamp) + timedelta(minutes=(it_finish_min))
-        opts.formatted_finish = it_finish.strftime("%Y-%m-%dT%H:%M:%S")
-    else:
-        if not opts.ndays:
-            opts.ndays = 1
-        elif opts.ndays == 0:
-            opts.ndays = 1;
-        now_timestamp = int(time.time())
-        adjustive_timestamp = now_timestamp - now_timestamp % (60 * int(opts.interval_tsar2))
-        head_timestamp = adjustive_timestamp - 86400 * opts.ndays
-        opts.begin = datetime.datetime.fromtimestamp(head_timestamp).strftime("%Y-%m-%dT%H:%M:%S")
-        it_finish_min = 1440 * opts.ndays - 1440 % int(opts.interval_tsar2)
         it_finish = datetime.datetime.fromtimestamp(head_timestamp) + timedelta(minutes=(it_finish_min))
         opts.formatted_finish = it_finish.strftime("%Y-%m-%dT%H:%M:%S")
 
@@ -563,11 +563,11 @@ def init_irqtop():
 
     if not opts.spec:
         if opts.irq_cpu_filter:
-            opts.specs = ["count", "irq", "CPU", "name"]
+            opts.specs = ["count", "irq", "cpu", "name"]
         else:
             opts.specs = ["count", "irq", "name"]
     for it_spec in opts.specs:
-        if it_spec not in ["count", "irq", "CPU", "name"]:                  # validate indicator 
+        if it_spec not in ["count", "irq", "cpu", "name"]:                  # validate indicator 
             raise Exception(it_spec + " is not correct.")
 
     if not opts.sort:
@@ -594,6 +594,29 @@ def init_irqtop():
             raise Exception(opts.item + " is not correct.")
     else:
         opts.items = opts.irq_names.keys()    
+
+def init_cputop():
+    opts.cpunr = getcpunr()     
+
+    if not opts.spec:
+        opts.specs = ["value", "cpu", "idct"]
+    for it_spec in opts.specs:
+        if it_spec not in ["value", "cpu", "idct"]:                         # validate indicator 
+            raise Exception(it_spec + " is not correct.")
+
+    if not opts.sort:
+        opts.sort = "util"
+    if opts.sort not in ["user", "sys", "wait", "hirq", "sirq", "idle", "util"]:   # validate sort
+        raise Exception(opts.sort + " is not correct.")
+
+    # init items
+    opts.items = []
+    if opts.item:
+        opts.items = parse_param_int(opts.item)
+        if max(opts.items) >= opts.cpunr:
+            raise Exception("param2:" + opts.item + " is not correct.")
+    else:
+        opts.items = range(0, opts.cpunr)
 
 def init_env():
     uts_releases  = os.uname()[2].split(".", 2)
@@ -623,6 +646,169 @@ def procs():
     print('tsar2 procs comming soon.', opts)
     #print('procs === ', args)
 
+#######################################################################################
+#                                                                                     #
+#                                    cputop part                                      #
+#                                                                                     #
+#######################################################################################
+
+def concatenate_cputop():
+    scmd = "ssar -P --api -o '"
+    for it_device in opts.items:
+        scmd += "metric=d:cfile=stat:line_begin=cpu{item}:column=2:alias={item}_user;".format(item=it_device)
+        scmd += "metric=d:cfile=stat:line_begin=cpu{item}:column=3:alias={item}_nice;".format(item=it_device)
+        scmd += "metric=d:cfile=stat:line_begin=cpu{item}:column=4:alias={item}_system;".format(item=it_device)
+        scmd += "metric=d:cfile=stat:line_begin=cpu{item}:column=5:alias={item}_idle;".format(item=it_device)
+        scmd += "metric=d:cfile=stat:line_begin=cpu{item}:column=6:alias={item}_iowait;".format(item=it_device)
+        scmd += "metric=d:cfile=stat:line_begin=cpu{item}:column=7:alias={item}_irq;".format(item=it_device)
+        scmd += "metric=d:cfile=stat:line_begin=cpu{item}:column=8:alias={item}_softirq;".format(item=it_device)
+        scmd += "metric=d:cfile=stat:line_begin=cpu{item}:column=9:alias={item}_steal;".format(item=it_device)
+        scmd += "metric=d:cfile=stat:line_begin=cpu{item}:column=10:alias={item}_guest;".format(item=it_device)
+        scmd += "metric=d:cfile=stat:line_begin=cpu{item}:column=11:alias={item}_guest_nice;".format(item=it_device)
+
+    scmd += "'"
+    if opts.formatted_finish:
+        scmd += " -f " + opts.formatted_finish
+    if opts.begin:
+        scmd += " -b " + opts.begin
+    if opts.interval_tsar2:
+        scmd += " -i " + opts.interval_tsar2
+
+    return scmd
+
+def display_cputop_lines(it_line, i):
+    it_collect_datetime = it_line['collect_datetime']
+    del it_line['collect_datetime']
+
+    new_line = {}
+    for it_device in opts.items:
+        it_stat_user       = float(it_line[str(it_device) + '_user'])
+        it_stat_nice       = float(it_line[str(it_device) + '_nice'])
+        it_stat_system     = float(it_line[str(it_device) + '_system'])
+        it_stat_idle       = float(it_line[str(it_device) + '_idle'])
+        it_stat_iowait     = float(it_line[str(it_device) + '_iowait'])
+        it_stat_irq        = float(it_line[str(it_device) + '_irq'])
+        it_stat_softirq    = float(it_line[str(it_device) + '_softirq'])
+        it_stat_steal      = float(it_line[str(it_device) + '_steal'])
+        it_stat_guest      = float(it_line[str(it_device) + '_guest'])
+        it_stat_guest_nice = float(it_line[str(it_device) + '_guest_nice'])
+
+        it_stat_cpu_times = it_stat_user +it_stat_nice +it_stat_system +it_stat_idle +it_stat_iowait +it_stat_irq +it_stat_softirq +it_stat_steal +it_stat_guest +it_stat_guest_nice
+        it_cpu_user = 100 * it_stat_user    / it_stat_cpu_times
+        it_cpu_sys  = 100 * it_stat_system  / it_stat_cpu_times
+        it_cpu_wait = 100 * it_stat_iowait  / it_stat_cpu_times
+        it_cpu_hirq = 100 * it_stat_irq     / it_stat_cpu_times
+        it_cpu_sirq = 100 * it_stat_softirq / it_stat_cpu_times
+        it_cpu_idle = 100 * it_stat_idle    / it_stat_cpu_times
+        it_cpu_util = 100 * (it_stat_cpu_times - it_stat_idle - it_stat_iowait - it_stat_steal) / it_stat_cpu_times
+
+        if opts.sort == "user":
+            new_line[str(it_device) + "_" + opts.sort] = it_cpu_user
+        elif opts.sort == "sys":
+            new_line[str(it_device) + "_" + opts.sort] = it_cpu_sys
+        elif opts.sort == "wait":
+            new_line[str(it_device) + "_" + opts.sort] = it_cpu_wait
+        elif opts.sort == "hirq":
+            new_line[str(it_device) + "_" + opts.sort] = it_cpu_hirq
+        elif opts.sort == "sirq":
+            new_line[str(it_device) + "_" + opts.sort] = it_cpu_sirq
+        elif opts.sort == "idle":
+            new_line[str(it_device) + "_" + opts.sort] = it_cpu_idle
+        elif opts.sort == "util":
+            new_line[str(it_device) + "_" + opts.sort] = it_cpu_util
+ 
+    #for it_key, it_value in it_line.items():
+    #    if not it_value:
+    #        continue
+    #    new_line[it_key] = float(it_value)
+   
+    if opts.reverse:
+        sorted_list = sorted(new_line.items(), key = lambda item: item[1], reverse = False)
+    else:
+        sorted_list = sorted(new_line.items(), key = lambda item: item[1], reverse = True)
+    sorted_list = sorted_list[:opts.field]
+    sorted_line = OrderedDict(sorted_list)
+    
+    if opts.live:
+        sorted_datetime = datetime.datetime.strptime(it_collect_datetime, "%Y-%m-%dT%H:%M:%S").strftime("%d/%m/%y-%H:%M:%S")
+    else:
+        sorted_datetime = datetime.datetime.strptime(it_collect_datetime, "%Y-%m-%dT%H:%M:%S").strftime("%d/%m/%y-%H:%M")
+    
+    if i % opts.area_line == 0:
+        print("")
+        if not opts.live:
+            line_out = '{:<14}'.format("Time")
+        else:
+            line_out = '{:<17}'.format("Time")
+        for it_order in range(opts.field):
+            if "value" in opts.specs:
+                line_out += " "
+                line_out += '{:-^6}'.format("N"+str(it_order+1))
+            if "cpu" in opts.specs:
+                line_out += " "
+                line_out += '{:-^3}'.format("N"+str(it_order+1))
+            if "idct" in opts.specs:
+                line_out += " "
+                line_out += '{:-^4}'.format("N"+str(it_order+1))
+        print(line_out)
+        if not opts.live:
+            line_out = '{:<14}'.format("Time")
+        else:
+            line_out = '{:<17}'.format("Time")
+        for it_order in range(opts.field):
+            if "value" in opts.specs:
+                line_out += " "
+                line_out += '{:>6}'.format("value")
+            if "cpu" in opts.specs:
+                line_out += " "
+                line_out += '{:<3}'.format("cpu")
+            if "idct" in opts.specs:
+                line_out += " "
+                line_out += '{:<4}'.format("idct")
+        print(line_out)
+
+    line_out = sorted_datetime
+    for it_key, it_value in sorted_line.items():
+        it_cpu  = it_key.split("_")[0]
+        it_idct = it_key.split("_")[1]
+        if "value" in opts.specs:
+            line_out += " "
+            line_out += '{:>6}'.format(format_bytes(it_value))
+        if "cpu" in opts.specs:
+            line_out += " "
+            line_out += '{:>3}'.format(it_cpu)
+        if "idct" in opts.specs:
+            line_out += " "
+            line_out += '{:<4}'.format(it_idct)
+    print(line_out)
+    sys.stdout.flush()
+
+def cputop_live():
+    ssar_cmd = concatenate_cputop()
+
+    ssar_output = subprocess.Popen(ssar_cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
+    i = 0
+    while True:
+        line = ssar_output.stdout.readline().strip()
+        if not line: 
+            break
+        else:
+            display_cputop_lines(json.loads(line), i)
+            i = i + 1
+
+def cputop():
+    ssar_cmd = concatenate_cputop()
+        
+    ssar_output = subprocess.Popen(ssar_cmd, shell=True, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    output, errors = ssar_output.communicate()
+    list_data = []
+    if ssar_output.returncode == 0:
+        list_data = json.loads(output)
+
+    i = 0
+    for it_line in list_data:
+        display_cputop_lines(it_line, i)
+        i = i+1
 
 #######################################################################################
 #                                                                                     #
@@ -765,7 +951,7 @@ def display_intr_lines(it_line, i):
             if "irq" in opts.specs:
                 line_out += " "
                 line_out += '{:-^3}'.format("N"+str(it_order+1))
-            if "CPU" in opts.specs:
+            if "cpu" in opts.specs:
                 line_out += " "
                 line_out += '{:-^3}'.format("N"+str(it_order+1))
             if "name" in opts.specs:
@@ -783,9 +969,9 @@ def display_intr_lines(it_line, i):
             if "irq" in opts.specs:
                 line_out += " "
                 line_out += '{:>3}'.format("irq")
-            if "CPU" in opts.specs:
+            if "cpu" in opts.specs:
                 line_out += " "
-                line_out += '{:<3}'.format("CPU")
+                line_out += '{:<3}'.format("cpu")
             if "name" in opts.specs:
                 line_out += " "
                 line_out += '{:<18}'.format("name")
@@ -803,7 +989,7 @@ def display_intr_lines(it_line, i):
         if "irq" in opts.specs:
             line_out += " "
             line_out += '{:0>3}'.format(it_key)
-        if "CPU" in opts.specs:
+        if "cpu" in opts.specs:
             line_out += " "
             if opts.irq_cpu_filter:
                 line_out += '{:<3}'.format(','.join(str(x) for x in precise_irq_cpus[it_key]))
@@ -813,6 +999,7 @@ def display_intr_lines(it_line, i):
             line_out += " "
             line_out += '{:<18}'.format(it_name)
     print(line_out)
+    sys.stdout.flush()
 
 def irqtop_live():
     if opts.irq_cpu_filter:
@@ -1585,6 +1772,7 @@ def display_lines(it_line, i, agregates = {}):
     for it_combine in opts.formated:
         line_out += " " + it_line[it_combine['item'] + '_' + it_combine['view'] + '_' + it_combine['indicator']]
     print(line_out)
+    sys.stdout.flush()
 
 def display_agregates(label, func, agregates):
     it_line = {}
@@ -1678,6 +1866,19 @@ def activity_reporter(optl):
             print("Exception: " + str(e))
             traceback.print_exc()
             sys.exit(205);
+    elif "cputop" == opts.cmd:
+        try:
+            init_cputop()
+            if opts.live:
+                cputop_live()
+            else:
+                cputop()
+        except KeyboardInterrupt as e:
+            sys.stdout.write('\n')
+        except Exception as e:
+            print("Exception: " + str(e))
+            traceback.print_exc()
+            sys.exit(205);
     elif "procs" == opts.cmd:
         procs()
     elif "workers" == opts.cmd:
@@ -1720,7 +1921,7 @@ def main():
     default_vi['io']      = ['util']
     default_vi['load']    = ['load1']
 
-    subcommand_list = ['irqtop', 'procs', 'workers']
+    subcommand_list = ['cputop', 'irqtop', 'procs', 'workers']
     subcommand_info = "Subcommands:" + "\n"
     for it_subcommand in subcommand_list:
         subcommand_info = subcommand_info + "  tsar2 " + it_subcommand + " -h\n"
@@ -1740,6 +1941,11 @@ Examples:
   tsar2 irqtop -l
   tsar2 irqtop -i 1
 '''
+    cputop_footer_info = '''
+Examples:
+  tsar2 cputop -l
+  tsar2 cputop -i 1
+'''
 
     ItFormatterClass = lambda prog: ItFormatter(prog, max_help_position = MAX_SUB_HELP_POSITION, width = MAX_HELP_WIDTH)
     root_parser = argparse.ArgumentParser(add_help = False, formatter_class = ItFormatterClass, usage = "%(prog)s [OPTIONS] [SUBCOMMAND]", description="%(prog)s program is compatible with tsar", epilog = subcommand_info + root_footer_info)
@@ -1748,7 +1954,7 @@ Examples:
     groupo.add_argument('-D','--detail'  ,dest='detail'   ,action='store_true',         help='do not conver data to K/M/G')
     groupo.add_argument('-i','--interval',dest='interval' ,type=int, metavar='N',       help='specify intervals numbers, in minutes if with --live, it is in seconds')
     groupo.add_argument('-s','--spec'    ,dest='spec'     ,type=str,                    help='show spec field data, %(prog)s --cpu -s sys,util')
-    groupo.add_argument('-f','--finish'  ,dest='finish'   ,type=str,                    help='finish datetime')
+    groupo.add_argument('-f','--finish'  ,dest='finish'   ,type=str,                    help='finish datetime, %(prog)s -f 19/09/21-10:25')
  
     group1 = groupo.add_mutually_exclusive_group()
     group1.add_argument('-w','--watch'   ,dest='watch'    ,type=int, metavar='N',       help='display last records in N mimutes. %(prog)s --watch 30 --cpu')
@@ -1780,20 +1986,36 @@ Examples:
     subparsers = common_parser.add_subparsers(dest='cmd')
 
     irqtop_parser = subparsers.add_parser("irqtop", help = "irqtop Command")
-    irqtop_parser.add_argument('--detail',  '-D',dest='detail'   ,action='store_true',         help='do not conver data to K/M/G')
-    irqtop_parser.add_argument('--interval','-i',dest='interval' ,type=int, metavar='N',       help='specify intervals numbers, in minutes if with --live, it is in seconds')
-    irqtop_parser.add_argument('--spec',    '-s',dest='spec'     ,type=str,                    help='show spec field data. %(prog)s -s count,irq')
-    irqtop_parser.add_argument('--item',    '-I',dest='item'     ,type=str,                    help='show spec item data. %(prog)s -I MOC,0-3,10')
+    irqtop_parser.add_argument('--finish',  '-f',dest='finish'   ,type=str,                    help='finish datetime. %(prog)s -f 19/09/21-10:25')
     irqtop_parser.add_argument('--watch',   '-w',dest='watch'    ,type=int, metavar='N',       help='display last records in N mimutes. %(prog)s --watch 30')
     irqtop_parser.add_argument('--ndays',   '-n',dest='ndays'    ,type=int, metavar='N',       help='show the value for the past days')
     irqtop_parser.add_argument('--date',    '-d',dest='date'     ,type=str, metavar='YYYYmmdd',help='show the value for the specify day')
     irqtop_parser.add_argument('--live',    '-l',dest='live'     ,action='store_true',         help='running print live mode, which module will print')
+    irqtop_parser.add_argument('--detail',  '-D',dest='detail'   ,action='store_true',         help='do not conver data to K/M/G')
+    irqtop_parser.add_argument('--interval','-i',dest='interval' ,type=int, metavar='N',       help='specify intervals numbers, in minutes if with --live, it is in seconds')
+    irqtop_parser.add_argument('--spec',    '-s',dest='spec'     ,type=str,                    help='show spec field data. %(prog)s -s count,irq')
+    irqtop_parser.add_argument('--item',    '-I',dest='item'     ,type=str,                    help='show spec item data. %(prog)s -I MOC,0-3,10')
     irqtop_parser.add_argument('--field',   '-F',dest='field'    ,type=int, metavar='N',       help='show top N interrupts. %(prog)s -F 5')
     irqtop_parser.add_argument('--cpus',    '-C',dest='cpus'     ,type=str,                    help='filter interrupts with CPU. %(prog)s -C 0-10,20')
     irqtop_parser.add_argument('--name',    '-N',dest='name'     ,type=str,                    help='filter interrupts with name. %(prog)s -N virtio')
     irqtop_parser.add_argument('--sort',    '-S',dest='sort'     ,type=str,                    help='sort order,default by count, other is irq. %(prog)s -s i')
     irqtop_parser.add_argument('--all',     '-A',dest='all'      ,action='store_true',         help='Display all irq, include MOC RES')
     irqtop_parser.set_defaults(callback = activity_reporter)
+
+    cputop_parser = subparsers.add_parser("cputop", help = "cputop Command")
+    cputop_parser.add_argument('--finish',  '-f',dest='finish'   ,type=str,                    help='finish datetime. %(prog)s -f 19/09/21-10:25')
+    cputop_parser.add_argument('--watch',   '-w',dest='watch'    ,type=int, metavar='N',       help='display last records in N mimutes. %(prog)s --watch 30')
+    cputop_parser.add_argument('--ndays',   '-n',dest='ndays'    ,type=int, metavar='N',       help='show the value for the past days')
+    cputop_parser.add_argument('--date',    '-d',dest='date'     ,type=str, metavar='YYYYmmdd',help='show the value for the specify day')
+    cputop_parser.add_argument('--live',    '-l',dest='live'     ,action='store_true',         help='running print live mode, which module will print')
+    cputop_parser.add_argument('--detail',  '-D',dest='detail'   ,action='store_true',         help='do not conver data to K/M/G')
+    cputop_parser.add_argument('--interval','-i',dest='interval' ,type=int, metavar='N',       help='specify intervals numbers, in minutes if with --live, it is in seconds')
+    cputop_parser.add_argument('--spec',    '-s',dest='spec'     ,type=str,                    help='show spec field data. %(prog)s -s value,cpu')
+    cputop_parser.add_argument('--item',    '-I',dest='item'     ,type=str,                    help='show spec item data. %(prog)s -I 0-3,10')
+    cputop_parser.add_argument('--field',   '-F',dest='field'    ,type=int, metavar='N',       help='show top N cpu. %(prog)s -F 5')
+    cputop_parser.add_argument('--sort',    '-S',dest='sort'     ,type=str,                    help='sort indicator,default by util. %(prog)s -S sirq')
+    cputop_parser.add_argument('--reverse', '-r',dest='reverse'  ,action='store_true',         help='sort order, default by decrease, %(prog)s -r')
+    cputop_parser.set_defaults(callback = activity_reporter)
     
     procs_parser = subparsers.add_parser("procs", help = "procs subcommand", formatter_class = ItFormatterClass, epilog = procs_footer_info)
     procs_parser.add_argument("-o", "--output", help = "output info")
@@ -1835,3 +2057,4 @@ Examples:
 
 if __name__ == "__main__":
     main()
+
