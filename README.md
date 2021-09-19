@@ -75,7 +75,7 @@ $ apt-get update
 $ apt install zlib1g-dev git
 $ cd ~/
 $ git clone https://codeup.openanolis.cn/codeup/tracing_diagnosis/ssar.git
-$ cd debian
+$ cd ssar/debian
 $ ./build.sh
 $ dpkg -i ssar_1.0-1_amd64.deb
 $ dpkg -r ssar                                                 # remove package
